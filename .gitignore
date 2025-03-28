@@ -1,0 +1,3 @@
+*.parquet
+data_yellow_taxis/
+__pycache__/
