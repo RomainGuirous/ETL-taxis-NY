@@ -8,6 +8,7 @@ import numpy as np
 
 
 def drop_duplicates(df):
+
     df = df.drop_duplicates()
     return df
 
@@ -17,6 +18,7 @@ def drop_duplicates(df):
 # va retourner les lignes qui pour respectent les conditions (les valeurs de la colonne sont dans la liste)
 
 def list_values_respected(df, column_name, list_values):
+
     df = df[df[column_name].isin(list_values)]
     return df
 
@@ -24,6 +26,7 @@ def list_values_respected(df, column_name, list_values):
 # cette fonction va supprimer les lignes qui contiennent des valeurs nulles dans les colonnes de la liste entrée
 
 def remove_rows_with_nulls_in_columns(df, list_column_name):
+
     df = df.dropna(subset=list_column_name)
     return df
 
@@ -33,6 +36,7 @@ def remove_rows_with_nulls_in_columns(df, list_column_name):
 # cette fonction va supprimer les caractères spéciaux et les espaces dans les colonnes de la liste entrée, et va mettre les valeurs en minuscule
 
 def remove_special_characters(df, list_column_name):
+
     for column in list_column_name:
         # Vérifie que la colonne existe dans le DataFrame
         if column not in df.columns:
@@ -40,13 +44,13 @@ def remove_special_characters(df, list_column_name):
             raise KeyError(
                 f"Erreur : La colonne '{column}' n'existe pas dans le DataFrame.")
 
-        try:
-            # Supprime les caractères spéciaux, les espaces et met les valeurs en minuscule
-            df[column] = df[column].str.strip().str.lower()
-        except Exception as e:
-            # arrete la fonction (raise) et indique l'erreur (e) qui s'est produite sur quelle colonne (column)
-            raise Exception(
-                f"Erreur inattendue lors du traitement de la colonne '{column}': {e}")
+        # Vérifie que la colonne contient des chaînes de caractères
+        if not pd.api.types.is_string_dtype(df[column]):
+            raise TypeError(
+                f"Erreur : La colonne '{column}' ne contient pas de chaînes de caractères.")
+
+        # Supprime les caractères spéciaux, les espaces et met les valeurs en minuscule
+        df[column] = df[column].str.strip().str.lower()
     return df
 
 
@@ -55,26 +59,32 @@ def remove_special_characters(df, list_column_name):
 # retourne les lignes qui respectent le format de date
 
 def date_format_respected(df, list_column_name, date_format="%Y-%m-%d %H:%M:%S"):
-    # Utilise pd.to_datetime avec errors='coerce' pour convertir les valeurs incorrectes en NaT
+
     for column in list_column_name:
+
         # Vérifie que la colonne existe dans le DataFrame
         if column not in df.columns:
             raise KeyError(
                 f"Erreur : La colonne '{column}' n'existe pas dans le DataFrame.")
-        try:
-            # Convertit la colonne en datetime avec le format spécifié
-            df[column] = pd.to_datetime(
-                df[column], format=date_format, errors="coerce")
-        except Exception as e:
-            raise Exception(
-                f"Erreur inattendue lors du traitement de la colonne '{column}': {e}")
+
+        # vérifie qu'il existe des valeurs de type datetime dans la colonne, sinon on lève une erreur
+        if not pd.api.types.is_datetime64_any_dtype(df[column]):
+            raise TypeError(
+                f"Erreur : La colonne '{column}' ne contient pas de valeurs compatibles avec un format de date.")
+
+        # Utilise pd.to_datetime avec errors='coerce' pour convertir les valeurs incorrectes en NaT
+        # Convertit la colonne en datetime avec le format spécifié
+        df[column] = pd.to_datetime(
+            df[column], format=date_format, errors="coerce")
+
     # Filtre les lignes où la colonne n'est pas NaT (c'est-à-dire où le format est respecté)
     df = df.dropna(subset=list_column_name)
-    
-     # Vérifie si une colonne est devenue entièrement vide après le filtrage
+
+    # Vérifie si une colonne est devenue entièrement vide après le filtrage
     for column in list_column_name:
         if df[column].isna().all():
-            raise ValueError(f"Erreur : Toutes les valeurs de la colonne '{column}' sont invalides après le filtrage.")
+            raise ValueError(
+                f"Erreur : Toutes les valeurs de la colonne '{column}' sont invalides après le filtrage.")
     return df
 
 
@@ -84,6 +94,19 @@ def date_format_respected(df, list_column_name, date_format="%Y-%m-%d %H:%M:%S")
 
 
 def rename_columns(df, columns_dict):
+
+    for colonne in columns_dict.keys():
+
+        # Vérifie que la colonne existe dans le DataFrame
+        if colonne not in df.columns:
+            raise KeyError(
+                f"Erreur : La colonne '{colonne}' n'existe pas dans le DataFrame.")
+
+        # Vérifie que la nouvelle colonne n'existe pas déjà
+        if columns_dict[colonne] in df.columns:
+            raise KeyError(
+                f"Erreur : La colonne '{columns_dict[colonne]}' existe déjà dans le DataFrame.")
+
     df = df.rename(columns=columns_dict)
     return df
 
@@ -91,12 +114,14 @@ def rename_columns(df, columns_dict):
 # transforme miles en km
 
 def miles_to_km(miles):
+
     return round(miles * 1.609344, 2)
 
 
 # transforme les miles en km dans la colonne trip_distance
 
 def trip_distance_miles_to_km(df):
+
     df["trip_distance"] = df["trip_distance"].apply(lambda x: miles_to_km(x))
     return df
 
@@ -104,8 +129,11 @@ def trip_distance_miles_to_km(df):
 # convertit les dollars en euros
 
 def dollars_to_euros(dollars):
-    if pd.isna(dollars):  # Vérifie si la valeur est NaN
-        return np.NaN  # Retourne NaN sans modification
+
+    # Si la valeur est NaN, on la retourne sans modification
+    if pd.isna(dollars):
+        return np.NaN
+    # Sinon, on applique la conversion
     return round(dollars * 0.92, 2)
 
 
@@ -113,15 +141,20 @@ def dollars_to_euros(dollars):
 
 def convert_dollars_columns_to_other_devise(df, other_devise, list_column_name=['fare_amount', 'extra', 'mta_tax', 'tip_amount', 'tolls_amount', 'improvement_surcharge', 'total_amount', 'congestion_surcharge', 'airport_fee']):
     for column in list_column_name:
+
         # Vérifie que la colonne existe dans le DataFrame
         if column not in df.columns:
             raise KeyError(
                 f"Erreur : La colonne '{column}' n'existe pas dans le DataFrame.")
+
+        # Vérifie que la colonne contient des valeurs numériques
+        if not pd.api.types.is_numeric_dtype(df[column]):
+            raise TypeError(
+                f"Erreur : La colonne '{column}' ne contient pas de valeurs numériques.")
+
         # Applique la fonction sur chaque valeur de la colonne
-        try:
-            df[column] = df[column].apply(other_devise)
-        except Exception as e:
-            raise Exception(f"Erreur inattendue lors du traitement de la colonne '{column}': {e}")
+        df[column] = df[column].apply(other_devise)
+
     return df
 
 
@@ -139,11 +172,8 @@ def apply_transformations(df_entree, transformations):
             df = func(df, **kwargs)
         # Gestion des valeurs invalides
         except ValueError as e:
-            raise RuntimeError(f"Erreur de valeur dans la transformation '{func.__name__}': {e}")
-        # Gestion des erreurs inattendues
-        except Exception as e:
-            # Ajoute un contexte à l'erreur et la relance
-            raise RuntimeError(f"Erreur dans la transformation '{func.__name__}': {e}")
+            raise RuntimeError(
+                f"Erreur de valeur dans la transformation '{func.__name__}': {e}")
     # On reset l'index après toutes les transformations
     df = df.reset_index(drop=True)
     return df
