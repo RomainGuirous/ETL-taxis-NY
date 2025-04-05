@@ -1,25 +1,13 @@
 import pyarrow.parquet as pq
 import pandas as pd
 import numpy as np
-import os
-
-pd.set_option("display.max_columns", None)
-
-
-def transform_files_from_parquet_to_pandas(filepath):
-    # lire le fichier parquet
-    table = pq.read_table(filepath)
-    # transformer le fichier parquet en dataframe
-    df = table.to_pandas()
-    return df
-
 
 # 1) NETTOYAGE DES DONNEES
 
 # va effacer les lignes qui sont identiques sur toutes les colonnes
 
-def drop_duplicates(df_entree):
-    df = df_entree.copy()
+
+def drop_duplicates(df):
     df = df.drop_duplicates()
     return df
 
@@ -28,46 +16,37 @@ def drop_duplicates(df_entree):
 
 # va retourner les lignes qui pour respectent les conditions (les valeurs de la colonne sont dans la liste)
 
-def list_values_respected(df_entree, column_name, list_values):
-    df = df_entree.copy()
+def list_values_respected(df, column_name, list_values):
     df = df[df[column_name].isin(list_values)]
+    return df
 
 
 # cette fonction va supprimer les lignes qui contiennent des valeurs nulles dans les colonnes de la liste entrée
 
-def remove_rows_with_nulls_in_columns(df_entree, list_column_name):
-    df = df_entree.copy()
+def remove_rows_with_nulls_in_columns(df, list_column_name):
     df = df.dropna(subset=list_column_name)
     return df
 
-
-#     df = df_entree.copy()
-#   # Vérifie que toutes les colonnes spécifiées existent dans le DataFrame
-#     missing_columns = [col for col in list_column_name if col not in df.columns]
-#     if missing_columns:
-#         print(f"Les colonnes suivantes sont manquantes : {missing_columns}")
-#         # Vous pouvez lever une exception si ces colonnes sont critiques
-#         return df
-
-#     # Supprime les lignes contenant des valeurs nulles dans les colonnes spécifiées
-#     df = df.dropna(subset=list_column_name)
-#     return df
 
 # 3) NORMALISATION DES DONNEES
 
 # cette fonction va supprimer les caractères spéciaux et les espaces dans les colonnes de la liste entrée, et va mettre les valeurs en minuscule
 
-
-def remove_special_characters(df_entree, list_column_name):
-    df = df_entree.copy()
+def remove_special_characters(df, list_column_name):
     for column in list_column_name:
         # Vérifie que la colonne existe dans le DataFrame
-        if column in df.columns:
-            # supprime les caractères spéciaux et les espaces et met les valeurs en minuscule
-            try:
-                df[column] = df[column].str.strip().str.lower()
-            except Exception as e:
-                print(f"Column : {column}  does not exist in the DataFrame.")
+        if column not in df.columns:
+            # arrête la fonction (raise) et indique que la colonne n'existe pas (KeyError)
+            raise KeyError(
+                f"Erreur : La colonne '{column}' n'existe pas dans le DataFrame.")
+
+        try:
+            # Supprime les caractères spéciaux, les espaces et met les valeurs en minuscule
+            df[column] = df[column].str.strip().str.lower()
+        except Exception as e:
+            # arrete la fonction (raise) et indique l'erreur (e) qui s'est produite sur quelle colonne (column)
+            raise Exception(
+                f"Erreur inattendue lors du traitement de la colonne '{column}': {e}")
     return df
 
 
@@ -75,29 +54,36 @@ def remove_special_characters(df_entree, list_column_name):
 
 # retourne les lignes qui respectent le format de date
 
-def date_format_respected(df_entree, list_column_name, date_format="%Y-%m-%d %H:%M:%S"):
-    df = df_entree.copy()
+def date_format_respected(df, list_column_name, date_format="%Y-%m-%d %H:%M:%S"):
     # Utilise pd.to_datetime avec errors='coerce' pour convertir les valeurs incorrectes en NaT
     for column in list_column_name:
         # Vérifie que la colonne existe dans le DataFrame
-        if column in df.columns:
+        if column not in df.columns:
+            raise KeyError(
+                f"Erreur : La colonne '{column}' n'existe pas dans le DataFrame.")
+        try:
             # Convertit la colonne en datetime avec le format spécifié
-            try:
-                df[column] = pd.to_datetime(
-                    df[column], format=date_format, errors="coerce")
-            except Exception as e:
-                print(f"Column : {column}  does not exist in the DataFrame.")
+            df[column] = pd.to_datetime(
+                df[column], format=date_format, errors="coerce")
+        except Exception as e:
+            raise Exception(
+                f"Erreur inattendue lors du traitement de la colonne '{column}': {e}")
     # Filtre les lignes où la colonne n'est pas NaT (c'est-à-dire où le format est respecté)
     df = df.dropna(subset=list_column_name)
+    
+     # Vérifie si une colonne est devenue entièrement vide après le filtrage
+    for column in list_column_name:
+        if df[column].isna().all():
+            raise ValueError(f"Erreur : Toutes les valeurs de la colonne '{column}' sont invalides après le filtrage.")
     return df
+
 
 # 5) TRANSFORMATIONS DES DONNEES
 
 # renommer des colonnes (avec un dictionnaire du type {'old_name': 'new_name', 'old_name2': 'new_name2', etc})
 
 
-def rename_columns(df_entree, columns_dict):
-    df = df_entree.copy()
+def rename_columns(df, columns_dict):
     df = df.rename(columns=columns_dict)
     return df
 
@@ -110,8 +96,7 @@ def miles_to_km(miles):
 
 # transforme les miles en km dans la colonne trip_distance
 
-def trip_distance_miles_to_km(df_entree):
-    df = df_entree.copy()
+def trip_distance_miles_to_km(df):
     df["trip_distance"] = df["trip_distance"].apply(lambda x: miles_to_km(x))
     return df
 
@@ -126,16 +111,17 @@ def dollars_to_euros(dollars):
 
 # convertit les dollars en euros dans les colonnes de la liste entrée avec des valeur par défaut
 
-def convert_dollars_columns_to_other_devise(df_entree, other_devise, list_column_name=['fare_amount', 'extra', 'mta_tax', 'tip_amount', 'tolls_amount', 'improvement_surcharge', 'total_amount', 'congestion_surcharge', 'airport_fee']):
-    df = df_entree.copy()
+def convert_dollars_columns_to_other_devise(df, other_devise, list_column_name=['fare_amount', 'extra', 'mta_tax', 'tip_amount', 'tolls_amount', 'improvement_surcharge', 'total_amount', 'congestion_surcharge', 'airport_fee']):
     for column in list_column_name:
         # Vérifie que la colonne existe dans le DataFrame
-        if column in df.columns:
-            # Applique la fonction sur chaque valeur de la colonne
-            try:
-                df[column] = df[column].apply(other_devise)
-            except Exception as e:
-                print(f"Column : {column}  does not exist in the DataFrame.")
+        if column not in df.columns:
+            raise KeyError(
+                f"Erreur : La colonne '{column}' n'existe pas dans le DataFrame.")
+        # Applique la fonction sur chaque valeur de la colonne
+        try:
+            df[column] = df[column].apply(other_devise)
+        except Exception as e:
+            raise Exception(f"Erreur inattendue lors du traitement de la colonne '{column}': {e}")
     return df
 
 
@@ -151,40 +137,13 @@ def apply_transformations(df_entree, transformations):
         try:
             # Applique la transformation
             df = func(df, **kwargs)
-        # Gestion des colonnes manquantes
-        except KeyError as e:
-            print(
-                f"Erreur : Colonne manquante dans la fonction '{func.__name__}'. Détails : {e}")
         # Gestion des valeurs invalides
         except ValueError as e:
-            print(
-                f"Erreur : Valeur invalide dans la fonction '{func.__name__}'. Détails : {e}")
+            raise RuntimeError(f"Erreur de valeur dans la transformation '{func.__name__}': {e}")
         # Gestion des erreurs inattendues
         except Exception as e:
-            print(f"Erreur inattendue dans la fonction '{func.__name__}': {e}")
+            # Ajoute un contexte à l'erreur et la relance
+            raise RuntimeError(f"Erreur dans la transformation '{func.__name__}': {e}")
     # On reset l'index après toutes les transformations
     df = df.reset_index(drop=True)
     return df
-
-
-df = transform_files_from_parquet_to_pandas(
-    "data_yellow_taxis/yellow_tripdata_2019-01.parquet")
-print('début')
-print(apply_transformations(
-    df, [
-        (drop_duplicates, {
-        }),
-        (remove_rows_with_nulls_in_columns, {
-            'list_column_name': ['passenger_count', 'trip_distance', 'PULocationID', 'DOLocationID']
-        }),
-        (date_format_respected, {
-            "list_column_name": ["tpep_pickup_datetime", "tpep_dropoff_datetime"]
-        }),
-        (convert_dollars_columns_to_other_devise, {
-            'other_devise': dollars_to_euros,
-            'list_column_name': ['fare_amount', 'extra', 'mta_tax', 'tip_amount', 'tolls_amount', 'improvement_surcharge', 'total_amount', 'congestion_surcharge', 'airport_fee']
-        })
-    ]).head())
-# print(df.columns.values)
-# print(df.head())
-print('fin')
