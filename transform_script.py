@@ -138,6 +138,7 @@ def dollars_to_euros(dollars):
 
 
 # convertit les dollars en euros dans les colonnes de la liste entrée avec des valeur par défaut
+#/!\ à partir de 2025, une colonne sera ajoutée, cbd_congestion_fee, elle n'est pas comprise dans la liste par défaut, il faudra l'ajouter dans la liste si on veut la convertir en euros /!\
 
 def convert_dollars_columns_to_other_devise(df, other_devise, list_column_name=['fare_amount', 'extra', 'mta_tax', 'tip_amount', 'tolls_amount', 'improvement_surcharge', 'total_amount', 'congestion_surcharge', 'airport_fee']):
     for column in list_column_name:
