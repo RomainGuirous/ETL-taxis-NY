@@ -57,6 +57,21 @@ def download_yellow_taxis_files_years(annee_debut, annee_fin, mois_debut=1, mois
     for year in range(annee_debut, annee_fin+1):
         for month in range(mois_debut, mois_fin+1):
 
+            # on vérifie annee_fin >= annee_debut
+            if annee_fin < annee_debut:
+                raise ValueError(
+                    "L'année de début doit être inférieure ou égale à l'année de fin.")
+            
+            # on vérifie que annee_debut >= 2009
+            if annee_debut < 2009:
+                raise ValueError(
+                    "Il n'y a pas de données avant 2009.")
+
+
+            # on vérifie que les donnés entrées sont bien des int
+            if not isinstance(annee_debut, int) or not isinstance(annee_fin, int):
+                raise ValueError("Les paramètres 'annee_debut' et 'annee_fin' doivent être des entiers.")
+
             # on vérifie si l'année et le mois sont valides
             if not (1 <= mois_debut <= 12) or not (1 <= mois_fin <= 12):
                 raise ValueError(
