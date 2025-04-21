@@ -2,6 +2,7 @@ import pyarrow.parquet as pq
 import requests
 import logging
 import os
+import pandas as pd
 
 
 # configurer le logging
@@ -10,7 +11,25 @@ logging.basicConfig(level=logging.INFO,
 
 
 # fonction pour afficher le résumé des téléchargements
-def summarize_downloads(total, success, skipped, failed):
+def summarize_downloads(
+    total: int,
+    success: int,
+    skipped: int,
+    failed: int
+) -> None:
+    """
+    Affiche un résumé des téléchargements effectués.
+
+    Args:
+        total (int): Nombre total de fichiers à télécharger.
+        success (int): Nombre de fichiers téléchargés avec succès.
+        skipped (int): Nombre de fichiers ignorés.
+        failed (int): Nombre de fichiers échoués.
+
+    Returns:
+        None: Cette fonction ne retourne rien, mais affiche un résumé des téléchargements.
+
+    """
     logging.info(f"Résumé des téléchargements :")
     logging.info(f"  Total : {total}")
     logging.info(f"  Réussis : {success}")
@@ -22,7 +41,19 @@ def summarize_downloads(total, success, skipped, failed):
 
 # cette fonction va vérifier si le fichier est de type parquet et non vide, sinon il va le supprimer
 # on fait la distinction entre un fichier vide et un fichier corrompu ou invalide
-def validate_parquet_file(file_name):
+def validate_parquet_file(file_name: str) -> None:
+    """
+    Vérifie si le fichier est de type parquet et non vide, sinon il le supprime.
+
+    Args:
+        file_name (str): Le nom du fichier à valider.
+
+    Raises:
+        RuntimeError: Si le fichier est vide ou corrompu.
+
+    Returns:
+        None: Cette fonction ne retourne rien, mais lève une exception si le fichier est vide ou corrompu.
+    """
     try:
 
         # si le fichier est vide
@@ -48,7 +79,35 @@ def validate_parquet_file(file_name):
 
 
 # cette fonction va télécharger des fichier parquet concernat les yellow taxis à partir d'année de début et d'année de fin sur ce site : https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page
-def download_yellow_taxis_files_years(annee_debut, annee_fin, mois_debut=1, mois_fin=12):
+def download_yellow_taxis_files_years(
+    annee_debut: int,
+    annee_fin: int,
+    mois_debut: int = 1,
+    mois_fin: int = 12
+) -> None:
+    """
+    Télécharge les fichiers parquet des yellow taxis pour une plage d'années et de mois spécifiée.
+    Les fichiers sont enregistrés dans le dossier "data_yellow_taxis".
+    Si le fichier existe déjà et est valide, il est ignoré.
+    Si le fichier existe mais est invalide, il est remplacé.
+    Si le téléchargement échoue, un message d'erreur est affiché.
+
+    Args:
+        annee_debut (int): L'année de début pour le téléchargement.
+        annee_fin (int): L'année de fin pour le téléchargement.
+        mois_debut (int): Le mois de début pour le téléchargement. Par défaut, 1.
+        mois_fin (int): Le mois de fin pour le téléchargement. Par défaut, 12.
+
+    Raises:
+        ValueError: Si l'année de début est supérieure à l'année de fin.
+        ValueError: Si l'année de début est inférieure à 2009.
+        ValueError: Si les mois ne sont pas compris entre 1 et 12.
+        ValueError: Si les paramètres 'annee_debut' et 'annee_fin' ne sont pas des entiers.
+        RuntimeError: Si le téléchargement échoue ou si le fichier est corrompu ou vide.
+
+    Returns:
+        None: Cette fonction ne retourne rien, mais télécharge les fichiers parquet et les enregistre dans le dossier "data_yellow_taxis".
+    """
     # Crée le dossier s'il n'existe pas
     os.makedirs("data_yellow_taxis", exist_ok=True)
 
@@ -61,16 +120,16 @@ def download_yellow_taxis_files_years(annee_debut, annee_fin, mois_debut=1, mois
             if annee_fin < annee_debut:
                 raise ValueError(
                     "L'année de début doit être inférieure ou égale à l'année de fin.")
-            
+
             # on vérifie que annee_debut >= 2009
             if annee_debut < 2009:
                 raise ValueError(
                     "Il n'y a pas de données avant 2009.")
 
-
             # on vérifie que les donnés entrées sont bien des int
             if not isinstance(annee_debut, int) or not isinstance(annee_fin, int):
-                raise ValueError("Les paramètres 'annee_debut' et 'annee_fin' doivent être des entiers.")
+                raise ValueError(
+                    "Les paramètres 'annee_debut' et 'annee_fin' doivent être des entiers.")
 
             # on vérifie si l'année et le mois sont valides
             if not (1 <= mois_debut <= 12) or not (1 <= mois_fin <= 12):
@@ -141,7 +200,19 @@ def download_yellow_taxis_files_years(annee_debut, annee_fin, mois_debut=1, mois
 
 
 # lit le fichier parquet et le transforme en dataframe pandas
-def transform_files_from_parquet_to_pandas(filepath):
+def transform_files_from_parquet_to_pandas(filepath: str) -> pd.DataFrame:
+    """
+    Transforme un fichier parquet en DataFrame pandas.
+
+    Args:
+        filepath (str): Le chemin du fichier parquet à transformer.
+
+    Raises:
+        Exception: Si la transformation échoue.
+
+    Returns:
+        pd.DataFrame: Le DataFrame pandas résultant.
+    """
     try:
         table = pq.read_table(filepath)
         df = table.to_pandas()

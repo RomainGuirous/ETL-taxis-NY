@@ -1,7 +1,9 @@
 import logging
-from extract_script import download_yellow_taxis_files_years
-from transform_script import transform_files_from_parquet_to_pandas
+from extract_script import download_yellow_taxis_files_years, transform_files_from_parquet_to_pandas
+from transform_script import 
 from load_script import load_data_to_database
+import pandas as pd
+
 
 # Configurer le logging
 logging.basicConfig(
@@ -24,7 +26,7 @@ def run_etl():
         # Étape 2 : Transformation
         logging.info("Début de l'étape de transformation.")
         transformed_data = transform_files_from_parquet_to_pandas(
-            "data_yellow_taxis")
+                       "data_yellow_taxis/yellow_tripdata_2020-01.parquet")
         logging.info("Étape de transformation terminée avec succès.")
 
         # Étape 3 : Chargement

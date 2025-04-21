@@ -1,7 +1,7 @@
-import pyarrow.parquet as pq
 import pandas as pd
 import numpy as np
 import logging
+from typing import Callable  # pour faire un type hint de type fonction
 
 
 # 0) FONCTIONS GENERALES
@@ -12,7 +12,21 @@ logging.basicConfig(level=logging.INFO,
 
 
 # cette fonction va vérifier que la colonne existe dans le dataframe, sinon elle lève une erreur
-def check_column_exists(df, column_name):
+def check_column_exists(df: pd.DataFrame, column_name: str) -> None:
+    """
+    Vérifie si une colonne existe dans le DataFrame.
+    Si la colonne n'existe pas, lève une KeyError.
+
+    Args:
+        df (pd.DataFrame): Le DataFrame à vérifier.
+        column_name (str): Le nom de la colonne à vérifier.
+
+    Raises:
+        KeyError: Si la colonne n'existe pas dans le DataFrame.
+
+    Returns:
+        None: Si la colonne existe.
+    """
     if column_name not in df.columns:
         raise KeyError(
             f"Erreur : La colonne '{column_name}' n'existe pas dans le DataFrame.")
@@ -21,8 +35,16 @@ def check_column_exists(df, column_name):
 # 1) NETTOYAGE DES DONNEES
 
 # va effacer les lignes qui sont identiques sur toutes les colonnes
-def drop_duplicates(df):
+def drop_duplicates(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Supprime les lignes du DataFrame qui sont identiques sur toutes les colonnes.
 
+    Args:
+        df (pd.DataFrame): Le DataFrame à nettoyer.
+
+    Returns:
+        pd.DataFrame: Le DataFrame sans les lignes dupliquées.
+    """
     df = df.drop_duplicates()
     return df
 
@@ -30,15 +52,38 @@ def drop_duplicates(df):
 # 2) GESTIONS VALEURS MANQUANTES
 
 # va retourner les lignes qui pour respectent les conditions (les valeurs de la colonne sont dans la liste)
-def list_values_respected(df, column_name, list_values):
+def list_values_respected(
+    df: pd.DataFrame,
+    column_name: str,
+    list_values: list
+) -> pd.DataFrame:
+    """
+    Retourne les lignes du DataFrame où les valeurs de la colonne spécifiée sont dans la liste donnée.
 
+    Args:
+        df (pd.DataFrame): Le DataFrame à filtrer.
+        column_name (str): Le nom de la colonne à vérifier.
+        list_values (list): La liste des valeurs autorisées.
+
+    Returns:
+        pd.DataFrame: Le DataFrame filtré.
+    """
     df = df[df[column_name].isin(list_values)]
     return df
 
 
 # cette fonction va supprimer les lignes qui contiennent des valeurs nulles dans les colonnes de la liste entrée
-def remove_rows_with_nulls_in_columns(df, list_column_name):
+def remove_rows_with_nulls_in_columns(df: pd.DataFrame, list_column_name: list) -> pd.DataFrame:
+    """
+    Supprime les lignes du DataFrame qui contiennent des valeurs nulles dans les colonnes spécifiées.
 
+    Args:
+        df (pd.DataFrame): Le DataFrame à nettoyer.
+        list_column_name (list): La liste des noms de colonnes à vérifier.
+
+    Returns:
+        pd.DataFrame: Le DataFrame sans les lignes contenant des valeurs nulles dans les colonnes spécifiées.
+    """
     df = df.dropna(subset=list_column_name)
     return df
 
@@ -46,8 +91,18 @@ def remove_rows_with_nulls_in_columns(df, list_column_name):
 # 3) NORMALISATION DES DONNEES
 
 # cette fonction va supprimer les caractères spéciaux et les espaces dans les colonnes de la liste entrée, et va mettre les valeurs en minuscule
-def remove_special_characters(df, list_column_name):
+def remove_special_characters(df: pd.DataFrame, list_column_name: list) -> pd.DataFrame:
+    """
+    Supprime les caractères spéciaux et les espaces dans les colonnes spécifiées du DataFrame,
+    et met les valeurs en minuscule.
 
+    Args:
+        df (pd.DataFrame): Le DataFrame à nettoyer.
+        list_column_name (list): La liste des noms de colonnes à normaliser.
+
+    Returns:
+        pd.DataFrame: Le DataFrame avec les colonnes normalisées.
+    """
     for column in list_column_name:
         # Vérifie que la colonne existe dans le DataFrame
         check_column_exists(df, column)
@@ -65,8 +120,22 @@ def remove_special_characters(df, list_column_name):
 # 4) VALIDATION ET FILTRAGE DES DONNEES
 
 # retourne les lignes qui respectent le format de date
-def date_format_respected(df, list_column_name, date_format="%Y-%m-%d %H:%M:%S"):
+def date_format_respected(
+    df: pd.DataFrame,
+    list_column_name: list,
+    date_format: str = "%Y-%m-%d %H:%M:%S"
+) -> pd.DataFrame:
+    """
+    Retourne les lignes du DataFrame où les colonnes spécifiées respectent le format de date donné.
 
+    Args:
+        df (pd.DataFrame): Le DataFrame à filtrer.
+        list_column_name (list): La liste des noms de colonnes à vérifier.
+        date_format (str): Le format de date à respecter. Par défaut : "%Y-%m-%d %H:%M:%S".
+
+    Returns:
+        pd.DataFrame: Le DataFrame filtré.
+    """
     for column in list_column_name:
 
         # Vérifie que la colonne existe dans le DataFrame
@@ -96,8 +165,17 @@ def date_format_respected(df, list_column_name, date_format="%Y-%m-%d %H:%M:%S")
 # 5) TRANSFORMATIONS DES DONNEES
 
 # renommer des colonnes (avec un dictionnaire du type {'old_name': 'new_name', 'old_name2': 'new_name2', etc})
-def rename_columns(df, columns_dict):
+def rename_columns(df: pd.DataFrame, columns_dict: dict) -> pd.DataFrame:
+    """
+    Renomme les colonnes du DataFrame selon le dictionnaire donné.
 
+    Args:
+        df (pd.DataFrame): Le DataFrame à modifier.
+        columns_dict (dict): Un dictionnaire où les clés sont les noms de colonnes existants et les valeurs sont les nouveaux noms.
+
+    Returns:
+        pd.DataFrame: Le DataFrame avec les colonnes renommées.
+    """
     for column in columns_dict.keys():
 
         # Vérifie que la colonne existe dans le DataFrame
@@ -113,21 +191,45 @@ def rename_columns(df, columns_dict):
 
 
 # transforme miles en km
-def miles_to_km(miles):
+def miles_to_km(miles: float) -> float:
+    """
+    Transforme une distance en miles en kilomètres.
 
+    Args:
+        miles (float): La distance en miles.
+
+    Returns:
+        float: La distance en kilomètres, arrondie à deux décimales.
+    """
     return round(miles * 1.609344, 2)
 
 
 # transforme les miles en km dans la colonne trip_distance
-def trip_distance_miles_to_km(df):
+def trip_distance_miles_to_km(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Transforme la distance de la colonne 'trip_distance' du DataFrame de miles en kilomètres.
 
+    Args:
+        df (pd.DataFrame): Le DataFrame à modifier.
+
+    Returns:
+        pd.DataFrame: Le DataFrame avec la colonne 'trip_distance' convertie en kilomètres.
+    """
     df["trip_distance"] = df["trip_distance"].apply(lambda x: miles_to_km(x))
     return df
 
 
 # convertit les dollars en euros
-def dollars_to_euros(dollars):
+def dollars_to_euros(dollars: float) -> float:
+    """
+    Convertit une valeur en dollars en euros.
 
+    Args:
+        dollars (float): La valeur en dollars.
+
+    Returns:
+        float: La valeur en euros, arrondie à deux décimales.
+    """
     # Si la valeur est NaN, on la retourne sans modification
     if pd.isna(dollars):
         return np.NaN
@@ -135,9 +237,29 @@ def dollars_to_euros(dollars):
     return round(dollars * 0.92, 2)
 
 
-# convertit les dollars en euros dans les colonnes de la liste entrée avec des valeur par défaut
+# convertit les dollars en autre devise (euros par défaut) dans les colonnes de la liste entrée avec des valeur par défaut
 # /!\ à partir de 2025, une colonne sera ajoutée, cbd_congestion_fee, elle n'est pas comprise dans la liste par défaut, il faudra l'ajouter dans la liste si on veut la convertir en euros /!\
-def convert_dollars_columns_to_other_devise(df, other_devise, list_column_name=['fare_amount', 'extra', 'mta_tax', 'tip_amount', 'tolls_amount', 'improvement_surcharge', 'total_amount', 'congestion_surcharge', 'airport_fee']):
+def convert_dollars_columns_to_other_devise(
+    df: pd.DataFrame,
+    other_devise: Callable[[float], float] = dollars_to_euros,
+    list_column_name: list = ['fare_amount', 'extra', 'mta_tax', 'tip_amount', 'tolls_amount',
+                              'improvement_surcharge', 'total_amount', 'congestion_surcharge', 'airport_fee']
+) -> pd.DataFrame:
+    """
+    Convertit les valeurs des colonnes spécifiées du DataFrame de dollars en une autre devise.
+    Par défaut, la conversion est faite en euros.
+    
+    Args:
+        df (pd.DataFrame): Le DataFrame à modifier.
+        other_devise (Callable[[float], float]): La fonction de conversion à appliquer. Par défaut : dollars_to_euros.
+        list_column_name (list): La liste des noms de colonnes à convertir.
+            
+                Par défaut : ['fare_amount', 'extra', 'mta_tax', 'tip_amount', 'tolls_amount',
+                            'improvement_surcharge', 'total_amount', 'congestion_surcharge', 'airport_fee'].
+                            
+    Returns:
+        pd.DataFrame: Le DataFrame avec les colonnes converties.
+    """
     for column in list_column_name:
 
         # Vérifie que la colonne existe dans le DataFrame
@@ -158,7 +280,22 @@ def convert_dollars_columns_to_other_devise(df, other_devise, list_column_name=[
 
 # cette fonction va appliquer une liste de transformations sur un dataframe, ces tranformations sont les fonctions définies au dessus
 # Exemple d'utilisation : transformations = [(trip_distance_miles_to_km, {}), (date_format_respected, {'column_name': 'pickup_datetime', 'date_format': '%Y-%m-%d %H:%M:%S'})]
-def apply_transformations(df_entree, transformations):
+def apply_transformations(df_entree: pd.DataFrame, transformations: list) -> pd.DataFrame:
+    """
+    Applique une liste de transformations sur un DataFrame.
+    Chaque transformation est une fonction qui prend le DataFrame en entrée et retourne un DataFrame modifié.
+    
+    Args:
+        df_entree (pd.DataFrame): Le DataFrame d'entrée.
+        transformations (list): Une liste de tuples où chaque tuple contient une fonction de transformation et ses arguments.
+            
+            Par exemple => [(fonction1, kwargs1), (fonction2, kwargs2), ...] où kwargs est un dictionnaire contenant les arguments de la fonction.
+                
+            Par exemple => (date_format_respected, {'column_name': 'pickup_datetime', 'date_format': '%Y-%m-%d %H:%M:%S'}).
+    
+    Returns:
+        pd.DataFrame: Le DataFrame après application de toutes les transformations.
+    """
     df = df_entree.copy()
     # transformations est une liste de tuples (fonction, kwargs), kwargs est un dictionnaire qui contient les arguments de la fonction
     for func, kwargs in transformations:
