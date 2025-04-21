@@ -13,58 +13,56 @@ logging.basicConfig(level=logging.INFO,
 
 
 # création de la connexion à la base de données
-def get_connection(username: str, password: str, host: str, port: int, db_name:str = None) -> Engine:
+def get_connection(username: str, password: str, host: str, port: int, db_name: str) -> Engine:
     """
     Crée une connexion à la base de données MySQL.
-    
+
     Args:
         username (str): Nom d'utilisateur de la base de données.
         password (str): Mot de passe de la base de données.
         host (str): Adresse du serveur de base de données.
         port (int): Port du serveur de base de données.
         db_name (str, optional): Nom de la base de données. Par défaut None.
-        
+
     Returns:
         engine: Un objet de connexion à la base de données.
     """
-    db_uri = f"mysql+pymysql://{username}:{password}@{host}:{port}"
-    if db_name:
-        db_uri += f"/{db_name}"
+    db_uri = f"mysql+pymysql://{username}:{password}@{host}:{port}/{db_name}"
     logging.info(f"Connexion à la base de données : {db_uri}")
     return create_engine(db_uri)
 
 
 # Vérification des paramètres de connexion
-def validate_connection_params(username: str, password: str, host: str, port: int) -> None:
+def validate_connection_params(username: str, password: str, host: str, port: int, db_name: str) -> None:
     """
     Vérifie les paramètres de connexion à la base de données.
-    
+
     Args:
         username (str): Nom d'utilisateur de la base de données.
         password (str): Mot de passe de la base de données.
         host (str): Adresse du serveur de base de données.
         port (int): Port du serveur de base de données.
-        
+
     Raises:
         ValueError: Si les paramètres de connexion sont invalides.
-        
+
     Returns:
         None: Cette fonction ne retourne rien, mais lève une exception si les paramètres de connexion sont invalides.
     """
-    if not username or not password or not host or not port:
+    if not username or not password or not host or not port or not db_name:
         raise ValueError(
-            "Les paramètres de connexion (username, password, host, port) doivent être renseignés.")
+            "Les paramètres de connexion (username, password, host, port, db_name) doivent être renseignés.")
 
 
 # Création de la base de données
 def create_database(conn: Engine, db_name: str) -> None:
     """
     Crée une base de données si elle n'existe pas déjà.
-    
+
     Args:
         conn: Connexion à la base de données.
         db_name (str): Nom de la base de données à créer.
-        
+
     Returns:
         None: Cette fonction ne retourne rien, mais crée la base de données si elle n'existe pas.
     """
@@ -82,11 +80,11 @@ def create_database(conn: Engine, db_name: str) -> None:
 def table_exists(conn: Engine, table_name: str) -> bool:
     """
     Vérifie si une table existe dans la base de données.
-    
+
     Args:
         conn: Connexion à la base de données.
         table_name (str): Nom de la table à vérifier.
-        
+
     Returns:
         bool: True si la table existe, False sinon.
     """
@@ -103,11 +101,11 @@ def table_exists(conn: Engine, table_name: str) -> bool:
 def create_table(conn: Engine, table_name: str) -> None:
     """
     Crée une table dans la base de données si elle n'existe pas déjà.
-    
+
     Args:
         conn: Connexion à la base de données.
         table_name (str): Nom de la table à créer.
-        
+
     Returns:
         None: Cette fonction ne retourne rien, mais crée la table si elle n'existe pas.
     """
@@ -117,12 +115,12 @@ def create_table(conn: Engine, table_name: str) -> None:
             create_table_query = f"""
             CREATE TABLE IF NOT EXISTS {table_name} (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                vendorId INT,
+                vendorid INT,
                 tpep_pickup_datetime DATETIME,
                 tpep_dropoff_datetime DATETIME,
                 passenger_count INT,
                 trip_distance FLOAT,
-                rate_code_id INT,
+                ratecodeid INT,
                 store_and_fwd_flag VARCHAR(1),
                 pickup_location_id INT,
                 dropoff_location_id INT,
@@ -143,18 +141,19 @@ def create_table(conn: Engine, table_name: str) -> None:
             logging.info(f"Table '{table_name}' vérifiée/créée.")
     except Exception as e:
         logging.error(f"Erreur lors de la création de la table : {e}")
+        raise Exception(f"Erreur lors de la création de la table : {e}")
 
 
 # Insertion des données dans la table
 def insert_data(conn: Engine, table_name: str, df: pd.DataFrame) -> None:
     """
     Insère des données dans une table de la base de données.
-    
+
     Args:
         conn: Connexion à la base de données.
         table_name (str): Nom de la table dans laquelle insérer les données.
         df (pd.DataFrame): DataFrame contenant les données à insérer.
-        
+
     Returns:
         None: Cette fonction ne retourne rien, mais insère les données dans la table.
     """
@@ -162,7 +161,7 @@ def insert_data(conn: Engine, table_name: str, df: pd.DataFrame) -> None:
         with conn.connect() as connection:
             # si la table existe déjà, on la remplace,index=False pour ne pas ajouter une colonne index
             df.to_sql(table_name, con=connection,
-                      if_exists='replace', index=False)
+                      if_exists='append', index=False)
             logging.info(f"Données insérées dans la table '{table_name}'.")
     except Exception as e:
         logging.error(f"Erreur lors de l'insertion des données : {e}")
@@ -174,20 +173,24 @@ def main_load_script(table_name: str, df: pd.DataFrame) -> None:
     Orchestre la création de la base de données et de la table, ainsi que l'insertion des données.
     Crée connexion à la base de données, crée la base de données si elle n'existe pas,
     crée la table si elle n'existe pas, et insère les données dans la table.
-    
+
     Args:
         table_name (str): Nom de la table à créer.
         df (pd.DataFrame): DataFrame contenant les données à insérer.
-        
+
     Returns:
         None: Cette fonction ne retourne rien, mais orchestre l'ensemble du processus.
     """
     try:
-        conn = get_connection(DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME)
-        validate_connection_params(DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT)
+        validate_connection_params(
+            DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME)
+
+        conn = get_connection(DB_USERNAME, DB_PASSWORD,
+                              DB_HOST, DB_PORT, DB_NAME)
         create_database(conn, DB_NAME)
-        if not table_exists(conn, table_name):
-            create_table(conn, table_name)
+        # if not table_exists(conn, table_name):
+        #     create_table(conn, table_name)
         insert_data(conn, table_name, df)
     except Exception as e:
         logging.error(f"Erreur dans la fonction principale : {e}")
+        

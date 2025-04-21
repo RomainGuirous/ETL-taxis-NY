@@ -79,32 +79,32 @@ def run_etl(annee_debut: int,
     # utiliser None comme valeur par défaut et en initialiser la liste à l'intérieur de la fonction évite ce problème
     if list_transformations is None:
         list_transformations: list = [
-            (ts.drop_duplicates, {"df": "df"}),
+            (ts.drop_duplicates, {}),
             (ts.list_values_respected, {
-                "df": "df",
+                
                 "column_name": "VendorID",
                 "list_values": [1, 2, 6, 7]
             }),
             (ts.list_values_respected, {
-                "df": "df",
-                "column_name": "RatecodeId",
+                
+                "column_name": "RatecodeID",
                 "list_values": [1, 2, 3, 4, 5, 6, 99]
             }),
             (ts.list_values_respected, {
-                "df": "df",
+            
                 "column_name": "store_and_fwd_flag",
                 "list_values": ["Y", "N"]
             }),
             (ts.list_values_respected, {
-                "df": "df",
+            
                 "column_name": "payment_type",
                 "list_values": [0, 1, 2, 3, 4, 5, 6]
             }),
-            (ts.remove_rows_with_nulls_in_columns, {
-                "df": "df"  # list_column_name non précisé pour appliquer valeurs par défaut
-            }),
+            # (ts.remove_rows_with_nulls_in_columns, {
+            #   # list_column_name non précisé pour appliquer valeurs par défaut
+            # }),
             (ts.date_format_respected, {
-                "df": "df"  # list_column_name et format non précisés pour appliquer valeurs par défaut
+              # list_column_name et format non précisés pour appliquer valeurs par défaut
             }),
         ]
     try:
@@ -137,11 +137,11 @@ def run_etl(annee_debut: int,
                     logging.info(f"Transformation du fichier : {file_path}")
 
                     # on transforme le fichier parquet en dataframe pandas
-                    df = transform_files_from_parquet_to_pandas(file_path)
+                    df_pandas = transform_files_from_parquet_to_pandas(file_path)
 
                     # on applique les transformations sur le dataframe pandas
                     transformed_data = ts.apply_transformations(
-                        df, list_transformations)
+                        df_pandas, list_transformations)
                     logging.info(
                         f"Transformation terminée pour le fichier : {file_path}")
 
@@ -152,4 +152,3 @@ def run_etl(annee_debut: int,
 
     except Exception as e:
         logging.error(f"Une erreur s'est produite lors du processus ETL : {e}")
-        raise

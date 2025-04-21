@@ -5,5 +5,5 @@
     "host": "localhost",
     "port": 3306,
     "db_name": "db_name",
-    "data_folder": "data_yellow_taxis",
+    "data_folder": "data_yellow_taxis"
 }

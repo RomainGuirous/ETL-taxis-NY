@@ -94,7 +94,7 @@ def remove_rows_with_nulls_in_columns(
         'improvement_surcharge',
         'total_amount',
         'congestion_surcharge',
-        'airport_fee'
+
     ]
 ) -> pd.DataFrame:
     """
@@ -122,7 +122,7 @@ def remove_special_characters(df: pd.DataFrame, list_column_name: list) -> pd.Da
     Args:
         df (pd.DataFrame): Le DataFrame à nettoyer.
         list_column_name (list): La liste des noms de colonnes à normaliser.
-        
+
     Raises:
         TypeError: Si une colonne ne contient pas de chaînes de caractères.
 
@@ -148,8 +148,11 @@ def remove_special_characters(df: pd.DataFrame, list_column_name: list) -> pd.Da
 # retourne les lignes qui respectent le format de date
 def date_format_respected(
     df: pd.DataFrame,
-    list_column_name: list = ['tpep_pickup_datetime', 'tpep_dropoff_datetime'],
-    date_format: str = "%Y-%m-%d %H:%M:%S"
+    list_column_name: list = [
+        'tpep_pickup_datetime',
+        'tpep_dropoff_datetime'
+    ],
+    date_format: str = '%Y-%m-%d %H:%M:%S'
 ) -> pd.DataFrame:
     """
     Retourne les lignes du DataFrame où les colonnes spécifiées respectent le format de date donné.
@@ -158,7 +161,7 @@ def date_format_respected(
         df (pd.DataFrame): Le DataFrame à filtrer.
         list_column_name (list): La liste des noms de colonnes à vérifier.
         date_format (str): Le format de date à respecter. Par défaut : "%Y-%m-%d %H:%M:%S".
-        
+
     Raises:
         TypeError: Si une colonne ne contient pas de valeurs compatibles avec un format de date.
         ValueError: Si une colonne devient entièrement vide après le filtrage.
@@ -179,7 +182,7 @@ def date_format_respected(
         # Utilise pd.to_datetime avec errors='coerce' pour convertir les valeurs incorrectes en NaT
         # Convertit la colonne en datetime avec le format spécifié
         df[column] = pd.to_datetime(
-            df[column], format=date_format, errors="coerce")
+            df[column], format = date_format, errors="coerce")
 
     # Filtre les lignes où la colonne n'est pas NaT (c'est-à-dire où le format est respecté)
     df = df.dropna(subset=list_column_name)
@@ -290,7 +293,7 @@ def convert_dollars_columns_to_other_devise(
     Raises:
         TypeError: Si une colonne ne contient pas de valeurs numériques.
         KeyError: Si une colonne n'existe pas dans le DataFrame.
-    
+
     Returns:
         pd.DataFrame: Le DataFrame avec les colonnes converties.
     """
@@ -331,7 +334,7 @@ def apply_transformations(df_entree: pd.DataFrame, transformations: list) -> pd.
         RuntimeError: Si une transformation échoue en raison d'une valeur invalide.
         KeyError: Si une colonne n'existe pas dans le DataFrame.
         TypeError: Si une colonne ne contient pas de valeurs numériques ou de chaînes de caractères.
-    
+
     Returns:
         pd.DataFrame: Le DataFrame après application de toutes les transformations.
     """
