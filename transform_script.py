@@ -73,7 +73,30 @@ def list_values_respected(
 
 
 # cette fonction va supprimer les lignes qui contiennent des valeurs nulles dans les colonnes de la liste entrée
-def remove_rows_with_nulls_in_columns(df: pd.DataFrame, list_column_name: list) -> pd.DataFrame:
+def remove_rows_with_nulls_in_columns(
+    df: pd.DataFrame,
+    list_column_name: list = [
+        'VendorID',
+        'tpep_pickup_datetime',
+        'tpep_dropoff_datetime',
+        'passenger_count',
+        'trip_distance',
+        'RatecodeID',
+        'store_and_fwd_flag',
+        'PULocationID',
+        'DOLocationID',
+        'payment_type',
+        'fare_amount',
+        'extra',
+        'mta_tax',
+        'tip_amount',
+        'tolls_amount',
+        'improvement_surcharge',
+        'total_amount',
+        'congestion_surcharge',
+        'airport_fee'
+    ]
+) -> pd.DataFrame:
     """
     Supprime les lignes du DataFrame qui contiennent des valeurs nulles dans les colonnes spécifiées.
 
@@ -99,6 +122,9 @@ def remove_special_characters(df: pd.DataFrame, list_column_name: list) -> pd.Da
     Args:
         df (pd.DataFrame): Le DataFrame à nettoyer.
         list_column_name (list): La liste des noms de colonnes à normaliser.
+        
+    Raises:
+        TypeError: Si une colonne ne contient pas de chaînes de caractères.
 
     Returns:
         pd.DataFrame: Le DataFrame avec les colonnes normalisées.
@@ -122,7 +148,7 @@ def remove_special_characters(df: pd.DataFrame, list_column_name: list) -> pd.Da
 # retourne les lignes qui respectent le format de date
 def date_format_respected(
     df: pd.DataFrame,
-    list_column_name: list,
+    list_column_name: list = ['tpep_pickup_datetime', 'tpep_dropoff_datetime'],
     date_format: str = "%Y-%m-%d %H:%M:%S"
 ) -> pd.DataFrame:
     """
@@ -132,6 +158,10 @@ def date_format_respected(
         df (pd.DataFrame): Le DataFrame à filtrer.
         list_column_name (list): La liste des noms de colonnes à vérifier.
         date_format (str): Le format de date à respecter. Par défaut : "%Y-%m-%d %H:%M:%S".
+        
+    Raises:
+        TypeError: Si une colonne ne contient pas de valeurs compatibles avec un format de date.
+        ValueError: Si une colonne devient entièrement vide après le filtrage.
 
     Returns:
         pd.DataFrame: Le DataFrame filtré.
@@ -248,15 +278,19 @@ def convert_dollars_columns_to_other_devise(
     """
     Convertit les valeurs des colonnes spécifiées du DataFrame de dollars en une autre devise.
     Par défaut, la conversion est faite en euros.
-    
+
     Args:
         df (pd.DataFrame): Le DataFrame à modifier.
         other_devise (Callable[[float], float]): La fonction de conversion à appliquer. Par défaut : dollars_to_euros.
         list_column_name (list): La liste des noms de colonnes à convertir.
-            
+
                 Par défaut : ['fare_amount', 'extra', 'mta_tax', 'tip_amount', 'tolls_amount',
                             'improvement_surcharge', 'total_amount', 'congestion_surcharge', 'airport_fee'].
-                            
+
+    Raises:
+        TypeError: Si une colonne ne contient pas de valeurs numériques.
+        KeyError: Si une colonne n'existe pas dans le DataFrame.
+    
     Returns:
         pd.DataFrame: Le DataFrame avec les colonnes converties.
     """
@@ -284,14 +318,19 @@ def apply_transformations(df_entree: pd.DataFrame, transformations: list) -> pd.
     """
     Applique une liste de transformations sur un DataFrame.
     Chaque transformation est une fonction qui prend le DataFrame en entrée et retourne un DataFrame modifié.
-    
+
     Args:
         df_entree (pd.DataFrame): Le DataFrame d'entrée.
         transformations (list): Une liste de tuples où chaque tuple contient une fonction de transformation et ses arguments.
-            
+
             Par exemple => [(fonction1, kwargs1), (fonction2, kwargs2), ...] où kwargs est un dictionnaire contenant les arguments de la fonction.
-                
+
             Par exemple => (date_format_respected, {'column_name': 'pickup_datetime', 'date_format': '%Y-%m-%d %H:%M:%S'}).
+
+    Raises:
+        RuntimeError: Si une transformation échoue en raison d'une valeur invalide.
+        KeyError: Si une colonne n'existe pas dans le DataFrame.
+        TypeError: Si une colonne ne contient pas de valeurs numériques ou de chaînes de caractères.
     
     Returns:
         pd.DataFrame: Le DataFrame après application de toutes les transformations.

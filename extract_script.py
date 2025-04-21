@@ -207,9 +207,6 @@ def transform_files_from_parquet_to_pandas(filepath: str) -> pd.DataFrame:
     Args:
         filepath (str): Le chemin du fichier parquet à transformer.
 
-    Raises:
-        Exception: Si la transformation échoue.
-
     Returns:
         pd.DataFrame: Le DataFrame pandas résultant.
     """

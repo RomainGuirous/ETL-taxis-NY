@@ -19,3 +19,6 @@ DB_PASSWORD = CONFIG["password"]
 DB_HOST = CONFIG.get("host", "localhost")  # Valeur par défaut : localhost
 DB_PORT = CONFIG.get("port", 3306)         # Valeur par défaut : 3306
 DB_NAME = CONFIG.get("db_name", "ny_taxi_db")  # Valeur par défaut : ny_taxi_db
+
+# Chemin du dossier contenant les fichiers Parquet
+DATA_FOLDER = CONFIG.get("data_folder", "data_yellow_taxis")  # Valeur par défaut : data_yellow_taxis
