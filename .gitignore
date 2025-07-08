@@ -179,3 +179,6 @@ pyrightconfig.json
 data_yellow_taxis/
 config.json
 .vscode
+
+# Docker
+*.tar

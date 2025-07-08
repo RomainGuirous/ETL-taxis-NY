@@ -4,9 +4,9 @@ Il n'est pas conçu pour être exécuté directement. Importez `run_etl` dans un
 """
 
 import logging
-from extract_script import download_yellow_taxis_files_years, transform_files_from_parquet_to_pandas
-import transform_script as ts
-from load_script import main_load_script
+from app.extract_script import download_yellow_taxis_files_years, transform_files_from_parquet_to_pandas
+import app.transform_script as ts
+from app.load_script import main_load_script
 import os
 from config import DATA_FOLDER
 
