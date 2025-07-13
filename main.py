@@ -2,6 +2,9 @@ import argparse
 from run_etl import run_etl
 
 if __name__ == "__main__":
+    #exemple commande à rentrer en terminal:
+    # python main.py --annee_debut 2020 --annee_fin 2020 --mois_debut 1 --mois_fin 1 --table_name yellow_taxis
+    
     # Définir les arguments en ligne de commande
     parser = argparse.ArgumentParser(description="Exécuter le processus ETL pour les taxis jaunes de New York.")
     parser.add_argument("--annee_debut", type=int, required=True, help="Année de début pour le téléchargement.")

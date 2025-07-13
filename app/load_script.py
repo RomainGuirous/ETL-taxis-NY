@@ -8,14 +8,19 @@ import pandas as pd
 # Logging permet de remplacer les print par des logs, ce qui est plus propre et permet de mieux gérer les erreurs
 # level=logging.INFO permet de ne pas afficher les messages de niveau DEBUG, et de de garder des messages plus concis
 # format permet de personnaliser le format des messages de log (ici on affiche la date, le niveau de log et le message)
-logging.basicConfig(level=logging.INFO,
-                    format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 
 # création de la connexion à la base de données
-def get_connection(username: str, password: str, host: str, port: int, db_name: str) -> Engine:
+def get_connection(
+    username: str, password: str, host: str, port: int, db_name: str = None
+) -> Engine:
     """
     Crée une connexion à la base de données MySQL.
+    Si db_name est None, la connexion se fera au serveur MySQL renseigné dans config.
+    Si db_name est spécifié, la connexion sera à cette base de données.
 
     Args:
         username (str): Nom d'utilisateur de la base de données.
@@ -27,13 +32,19 @@ def get_connection(username: str, password: str, host: str, port: int, db_name: 
     Returns:
         engine: Un objet de connexion à la base de données.
     """
-    db_uri = f"mysql+pymysql://{username}:{password}@{host}:{port}/{db_name}"
+    if db_name:
+        db_uri = f"mysql+pymysql://{username}:{password}@{host}:{port}/{db_name}"
+    else:
+        db_uri = f"mysql+pymysql://{username}:{password}@{host}:{port}"
+
     logging.info(f"Connexion à la base de données : {db_uri}")
     return create_engine(db_uri)
 
 
 # Vérification des paramètres de connexion
-def validate_connection_params(username: str, password: str, host: str, port: int, db_name: str) -> None:
+def validate_connection_params(
+    username: str, password: str, host: str, port: int, db_name: str
+) -> None:
     """
     Vérifie les paramètres de connexion à la base de données.
 
@@ -51,7 +62,8 @@ def validate_connection_params(username: str, password: str, host: str, port: in
     """
     if not username or not password or not host or not port or not db_name:
         raise ValueError(
-            "Les paramètres de connexion (username, password, host, port, db_name) doivent être renseignés.")
+            "Les paramètres de connexion (username, password, host, port, db_name) doivent être renseignés."
+        )
 
 
 # Création de la base de données
@@ -68,12 +80,10 @@ def create_database(conn: Engine, db_name: str) -> None:
     """
     try:
         with conn.connect() as connection:
-            connection.execute(
-                text(f"CREATE DATABASE IF NOT EXISTS {db_name}"))
+            connection.execute(text(f"CREATE DATABASE IF NOT EXISTS {db_name}"))
             logging.info(f"Base de données '{db_name}' vérifiée/créée.")
     except Exception as e:
-        logging.error(
-            f"Erreur lors de la création de la base de données : {e}")
+        logging.error(f"Erreur lors de la création de la base de données : {e}")
 
 
 # Vérification de l'existence de la table dans la base de données
@@ -122,8 +132,8 @@ def create_table(conn: Engine, table_name: str) -> None:
                 trip_distance FLOAT,
                 ratecodeid INT,
                 store_and_fwd_flag VARCHAR(1),
-                pickup_location_id INT,
-                dropoff_location_id INT,
+                PULocationID INT,
+                DOLocationID INT,
                 payment_type INT,
                 fare_amount FLOAT,
                 extra FLOAT,
@@ -145,7 +155,9 @@ def create_table(conn: Engine, table_name: str) -> None:
 
 
 # Insertion des données dans la table
-def insert_data(conn: Engine, table_name: str, df: pd.DataFrame) -> None:
+def insert_data(
+    conn: Engine, table_name: str, df: pd.DataFrame, mode: str = "development"
+) -> None:
     """
     Insère des données dans une table de la base de données.
 
@@ -159,38 +171,58 @@ def insert_data(conn: Engine, table_name: str, df: pd.DataFrame) -> None:
     """
     try:
         with conn.connect() as connection:
-            # si la table existe déjà, on la remplace,index=False pour ne pas ajouter une colonne index
-            df.to_sql(table_name, con=connection,
-                      if_exists='append', index=False)
-            logging.info(f"Données insérées dans la table '{table_name}'.")
+            if mode == "development":
+                # En mode développement : vider la table mais garder la structure (avec id AUTO_INCREMENT)
+                connection.execute(text(f"TRUNCATE TABLE {table_name}"))
+                df.to_sql(table_name, con=connection, if_exists="append", index=False)
+                logging.info(
+                    f"Données remplacées dans la table '{table_name}' (mode: {mode})."
+                )
+            else:
+                df.to_sql(table_name, con=connection, if_exists="append", index=False)
+                logging.info(f"Données insérées dans la table '{table_name}'.")
     except Exception as e:
         logging.error(f"Erreur lors de l'insertion des données : {e}")
 
 
 # Fonction principale pour orchestrer la création de la base de données et de la table
-def main_load_script(table_name: str, df: pd.DataFrame) -> None:
+def main_load_script(
+    table_name: str, df: pd.DataFrame, mode: str = "development"
+) -> None:
     """
-    Orchestre la création de la base de données et de la table, ainsi que l'insertion des données.
-    Crée connexion à la base de données, crée la base de données si elle n'existe pas,
-    crée la table si elle n'existe pas, et insère les données dans la table.
+    Orchestre le processus de création de la base de données, de la table et d'insertion des données.
+    Crée connexion au serveur MySQL, crée la base de données si elle n'existe pas.
+    Se connecte à la base de données, vérifie l'existence de la table et la crée si nécessaire, puis insère les données dans la table.
 
     Args:
         table_name (str): Nom de la table à créer.
         df (pd.DataFrame): DataFrame contenant les données à insérer.
+        mode (str): Mode d'insertion ("development" ou "production"). Par défaut "development".
 
     Returns:
         None: Cette fonction ne retourne rien, mais orchestre l'ensemble du processus.
     """
     try:
-        validate_connection_params(
-            DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME)
+        validate_connection_params(DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME)
 
-        conn = get_connection(DB_USERNAME, DB_PASSWORD,
-                              DB_HOST, DB_PORT, DB_NAME)
-        create_database(conn, DB_NAME)
-        # if not table_exists(conn, table_name):
-        #     create_table(conn, table_name)
-        insert_data(conn, table_name, df)
+        # Connexion au serveur MySQL
+        server_conn = get_connection(DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT)
+        create_database(server_conn, DB_NAME)
+
+        # Connexion à la base de données
+        conn = get_connection(DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME)
+
+        # Gestion de la création de table selon le mode
+        if mode == "development":
+            # En mode développement : toujours recréer la table avec la bonne structure
+            with conn.connect() as connection:
+                connection.execute(text(f"DROP TABLE IF EXISTS {table_name}"))
+            create_table(conn, table_name)
+        else:
+            # En mode production : créer la table seulement si elle n'existe pas
+            if not table_exists(conn, table_name):
+                create_table(conn, table_name)
+
+        insert_data(conn, table_name, df, mode)
     except Exception as e:
         logging.error(f"Erreur dans la fonction principale : {e}")
-        
